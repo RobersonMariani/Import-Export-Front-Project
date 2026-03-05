@@ -50,8 +50,7 @@ export const useExportStore = defineStore("export", () => {
 
   async function downloadExport(id: string): Promise<void> {
     try {
-      const url = await exportService.download(id);
-      window.open(url, "_blank");
+      await exportService.download(id);
     } catch {
       useNotificationStore().error("Erro ao baixar exportação");
     }

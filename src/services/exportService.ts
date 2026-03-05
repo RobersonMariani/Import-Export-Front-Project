@@ -39,11 +39,22 @@ export const exportService = {
     return response.data.data;
   },
 
-  async download(id: string): Promise<string> {
-    const response = await api.get<ApiResponse<{ download_url: string }>>(
-      `/exports/${id}/download`,
-    );
-    return response.data.data.download_url;
+  async download(id: string): Promise<void> {
+    const response = await api.get(`/exports/${id}/download`, {
+      responseType: "blob",
+    });
+    const contentDisposition = response.headers["content-disposition"] ?? "";
+    const match = contentDisposition.match(/filename="?(.+?)"?$/);
+    const filename = match?.[1] ?? `export-${id}.csv`;
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   },
 
   async delete(id: string): Promise<void> {
