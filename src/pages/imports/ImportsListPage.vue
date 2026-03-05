@@ -19,6 +19,50 @@ const importStore = useImportStore();
 const notify = useNotificationStore();
 const showUploadModal = ref(false);
 const selectedFile = ref<File | null>(null);
+const selectedIds = ref<Set<string>>(new Set());
+const bulkDeleting = ref(false);
+
+const allSelected = computed(
+  () =>
+    importStore.imports.length > 0 &&
+    importStore.imports.every((i) => selectedIds.value.has(i.id)),
+);
+
+const someSelected = computed(
+  () => selectedIds.value.size > 0 && !allSelected.value,
+);
+
+function toggleSelectAll(): void {
+  if (allSelected.value) {
+    selectedIds.value = new Set();
+  } else {
+    selectedIds.value = new Set(importStore.imports.map((i) => i.id));
+  }
+}
+
+function toggleSelect(id: string): void {
+  const next = new Set(selectedIds.value);
+  if (next.has(id)) {
+    next.delete(id);
+  } else {
+    next.add(id);
+  }
+  selectedIds.value = next;
+}
+
+async function handleBulkDelete(): Promise<void> {
+  const count = selectedIds.value.size;
+  if (count === 0) return;
+  if (!confirm(`Excluir ${count} importação(ões) selecionada(s)?`)) return;
+
+  bulkDeleting.value = true;
+  try {
+    await importStore.bulkDeleteImports([...selectedIds.value]);
+    selectedIds.value = new Set();
+  } finally {
+    bulkDeleting.value = false;
+  }
+}
 
 let fastTimer: ReturnType<typeof setInterval> | null = null;
 let bgTimer: ReturnType<typeof setInterval> | null = null;
@@ -204,12 +248,50 @@ function formatDuration(seconds: number | null): string {
     </div>
 
     <AppCard :padding="false">
-      <div class="border-b border-gray-200 p-4">
+      <div class="flex items-center gap-3 border-b border-gray-200 p-4">
         <AppSelect
           :options="IMPORT_STATUS_OPTIONS"
           placeholder="Filtrar por status"
           @update:model-value="handleStatusFilter"
         />
+
+        <transition
+          enter-active-class="transition duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-1"
+        >
+          <div
+            v-if="selectedIds.size > 0"
+            class="ml-auto flex items-center gap-3 rounded-lg bg-red-50 px-4 py-2"
+          >
+            <span class="text-sm font-medium text-red-700">
+              {{ selectedIds.size }} selecionado(s)
+            </span>
+            <AppButton
+              size="sm"
+              variant="ghost"
+              class="text-red-600 hover:text-red-800 hover:bg-red-100"
+              :loading="bulkDeleting"
+              @click="handleBulkDelete"
+            >
+              <span class="flex items-center gap-1.5">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                Excluir
+              </span>
+            </AppButton>
+            <button
+              class="text-sm text-red-500 underline hover:text-red-700"
+              @click="selectedIds = new Set()"
+            >
+              Limpar
+            </button>
+          </div>
+        </transition>
       </div>
 
       <div class="overflow-x-auto">
@@ -218,6 +300,15 @@ function formatDuration(seconds: number | null): string {
             class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500"
           >
             <tr>
+              <th class="w-12 px-4 py-3">
+                <input
+                  type="checkbox"
+                  :checked="allSelected"
+                  :indeterminate="someSelected"
+                  class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
+                  @change="toggleSelectAll"
+                />
+              </th>
               <th class="px-6 py-3">Arquivo</th>
               <th class="px-6 py-3">Status</th>
               <th class="px-6 py-3 w-64">Progresso</th>
@@ -228,7 +319,7 @@ function formatDuration(seconds: number | null): string {
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-if="importStore.loading" class="text-center">
-              <td colspan="6" class="px-6 py-12">
+              <td colspan="7" class="px-6 py-12">
                 <div class="flex flex-col items-center gap-3 text-gray-500">
                   <svg
                     class="h-8 w-8 animate-spin text-primary-500"
@@ -257,7 +348,7 @@ function formatDuration(seconds: number | null): string {
               v-else-if="importStore.imports.length === 0"
               class="text-center"
             >
-              <td colspan="6" class="px-6 py-12">
+              <td colspan="7" class="px-6 py-12">
                 <div class="flex flex-col items-center gap-2 text-gray-400">
                   <svg
                     class="h-12 w-12"
@@ -289,6 +380,14 @@ function formatDuration(seconds: number | null): string {
                   'hover:bg-gray-50': !isActive(imp),
                 }"
               >
+                <td class="w-12 px-4 py-4">
+                  <input
+                    type="checkbox"
+                    :checked="selectedIds.has(imp.id)"
+                    class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
+                    @change="toggleSelect(imp.id)"
+                  />
+                </td>
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-2">
                     <span

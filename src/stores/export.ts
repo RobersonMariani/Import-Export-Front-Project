@@ -92,6 +92,34 @@ export const useExportStore = defineStore("export", () => {
     }
   }
 
+  async function bulkDeleteExports(ids: string[]): Promise<number> {
+    let deleted = 0;
+    const errors: string[] = [];
+
+    for (const id of ids) {
+      try {
+        await exportService.delete(id);
+        exports.value = exports.value.filter((e) => e.id !== id);
+        deleted++;
+      } catch {
+        errors.push(id);
+      }
+    }
+
+    if (deleted > 0) {
+      useNotificationStore().success(
+        `${deleted} exportação(ões) excluída(s) com sucesso`,
+      );
+    }
+    if (errors.length > 0) {
+      useNotificationStore().error(
+        `Falha ao excluir ${errors.length} exportação(ões)`,
+      );
+    }
+
+    return deleted;
+  }
+
   async function retryExport(id: string): Promise<Export | null> {
     try {
       const result = await exportService.retry(id);
@@ -122,6 +150,7 @@ export const useExportStore = defineStore("export", () => {
     downloadExport,
     refreshStatus,
     deleteExport,
+    bulkDeleteExports,
     retryExport,
   };
 });

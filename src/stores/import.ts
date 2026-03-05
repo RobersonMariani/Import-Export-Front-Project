@@ -73,6 +73,34 @@ export const useImportStore = defineStore("import", () => {
     }
   }
 
+  async function bulkDeleteImports(ids: string[]): Promise<number> {
+    let deleted = 0;
+    const errors: string[] = [];
+
+    for (const id of ids) {
+      try {
+        await importService.delete(id);
+        imports.value = imports.value.filter((i) => i.id !== id);
+        deleted++;
+      } catch {
+        errors.push(id);
+      }
+    }
+
+    if (deleted > 0) {
+      useNotificationStore().success(
+        `${deleted} importação(ões) excluída(s) com sucesso`,
+      );
+    }
+    if (errors.length > 0) {
+      useNotificationStore().error(
+        `Falha ao excluir ${errors.length} importação(ões)`,
+      );
+    }
+
+    return deleted;
+  }
+
   async function retryImport(id: string): Promise<Import | null> {
     try {
       const result = await importService.retry(id);
@@ -111,6 +139,7 @@ export const useImportStore = defineStore("import", () => {
     uploadCsv,
     refreshStatus,
     deleteImport,
+    bulkDeleteImports,
     retryImport,
     setFilters,
   };
