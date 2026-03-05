@@ -23,6 +23,18 @@ export const useImportStore = defineStore("import", () => {
     }
   }
 
+  async function refreshImports(): Promise<void> {
+    const result = await importService.list(filters.value);
+    imports.value = result.data;
+    pagination.value = result.meta;
+  }
+
+  function hasActiveImports(): boolean {
+    return imports.value.some(
+      (i) => i.status === "queued" || i.status === "processing",
+    );
+  }
+
   async function fetchImport(id: string): Promise<void> {
     loading.value = true;
     try {
@@ -93,6 +105,8 @@ export const useImportStore = defineStore("import", () => {
     uploading,
     filters,
     fetchImports,
+    refreshImports,
+    hasActiveImports,
     fetchImport,
     uploadCsv,
     refreshStatus,

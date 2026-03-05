@@ -26,6 +26,22 @@ export const useExportStore = defineStore("export", () => {
     }
   }
 
+  async function refreshExports(): Promise<void> {
+    try {
+      const response = await exportService.list();
+      exports.value = response.data;
+      pagination.value = response.meta;
+    } catch {
+      // silent refresh
+    }
+  }
+
+  function hasActiveExports(): boolean {
+    return exports.value.some(
+      (e) => e.status === "queued" || e.status === "processing",
+    );
+  }
+
   async function createExport(
     payload: CreateExportPayload = {},
   ): Promise<Export> {
@@ -97,6 +113,8 @@ export const useExportStore = defineStore("export", () => {
     loading,
     creating,
     fetchExports,
+    refreshExports,
+    hasActiveExports,
     createExport,
     fetchExport,
     downloadExport,
