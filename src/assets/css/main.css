@@ -34,4 +34,20 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     @apply bg-gray-50 text-gray-900 antialiased;
   }
+
+  button,
+  a,
+  select,
+  label[for],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='file'],
+  [role='button'],
+  [role='link'],
+  [role='tab'],
+  [role='menuitem'],
+  [role='option'],
+  summary {
+    cursor: pointer;
+  }
 }
