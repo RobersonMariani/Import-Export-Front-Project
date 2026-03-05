@@ -120,6 +120,8 @@ O backend fornece 3 usuários pré-cadastrados via seeder:
   - Estimativa de tempo restante
   - Mensagem de erro (se houver)
 - Botões de reprocessar e excluir para imports com falha
+- Seleção em massa com checkbox e barra de ação para exclusão em lote
+- Paginação com opções de itens por página (15, 25, 50, 100)
 
 ### Exportações
 
@@ -130,6 +132,8 @@ O backend fornece 3 usuários pré-cadastrados via seeder:
 - Opção de compressão (gzip)
 - Download direto do arquivo ao concluir
 - Botões de reprocessar e excluir para exports com falha
+- Seleção em massa com checkbox e barra de ação para exclusão em lote
+- Paginação com opções de itens por página (15, 25, 50, 100)
 
 ### Health Check
 
@@ -164,7 +168,7 @@ src/
 │       ├── AppBadge.vue        → Badge de status com dot colorido
 │       ├── AppAlert.vue        → Alerta informativo/erro
 │       ├── AppProgressBar.vue  → Barra de progresso com gradiente
-│       ├── AppPagination.vue   → Paginação numérica
+│       ├── AppPagination.vue   → Paginação com per_page (15, 25, 50, 100)
 │       ├── AppFileUpload.vue   → Upload com drag-and-drop
 │       └── AppLogo.vue         → Logo da aplicação
 ├── composables/
@@ -226,6 +230,7 @@ Página → Store (Pinia) → Service (Axios) → API Backend
 | Lazy Loading            | Todas as páginas são carregadas sob demanda                |
 | Debounce                | Filtros de exportação com atualização debounced (400ms)    |
 | Polling                 | Composable `usePolling` para atualização periódica de status |
+| Bulk Actions            | Seleção em massa com checkbox, barra de ação e exclusão em lote |
 | Responsive Design       | Layout adapta-se a mobile, tablet e desktop                |
 
 ---
