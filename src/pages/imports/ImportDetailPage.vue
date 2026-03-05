@@ -66,8 +66,11 @@ watch(isFinal, (val) => {
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Detalhe da Importação</h1>
+    <div class="mb-8 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Detalhe da Importação</h1>
+        <p class="mt-1 text-sm text-gray-500">Acompanhe o progresso e status da importação</p>
+      </div>
       <div class="flex gap-2">
         <AppButton
           v-if="canRetry"

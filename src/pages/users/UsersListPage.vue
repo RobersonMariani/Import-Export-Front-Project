@@ -54,11 +54,14 @@ async function handleDelete(): Promise<void> {
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Usuários</h1>
-      <AppButton @click="router.push({ name: 'users-create' })"
-        >Novo Usuário</AppButton
-      >
+    <div class="mb-8 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Usuários</h1>
+        <p class="mt-1 text-sm text-gray-500">Gerencie os usuários do sistema</p>
+      </div>
+      <AppButton @click="router.push({ name: 'users-create' })">
+        Novo Usuário
+      </AppButton>
     </div>
 
     <AppCard :padding="false">

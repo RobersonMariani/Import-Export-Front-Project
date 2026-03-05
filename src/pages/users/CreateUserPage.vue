@@ -49,7 +49,10 @@ async function handleSubmit(): Promise<void> {
 
 <template>
   <div>
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">Novo Usuário</h1>
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900">Novo Usuário</h1>
+      <p class="mt-1 text-sm text-gray-500">Cadastre um novo usuário no sistema</p>
+    </div>
     <AppCard>
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

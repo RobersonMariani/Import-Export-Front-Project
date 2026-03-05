@@ -107,8 +107,11 @@ function formatDate(date: string): string {
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Exportações</h1>
+    <div class="mb-8 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Exportações</h1>
+        <p class="mt-1 text-sm text-gray-500">Exporte dados de usuários para CSV</p>
+      </div>
       <AppButton @click="showCreateModal = true">Nova Exportação</AppButton>
     </div>
 

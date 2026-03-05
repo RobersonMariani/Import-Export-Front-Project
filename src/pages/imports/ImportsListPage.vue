@@ -64,8 +64,11 @@ function formatDate(date: string): string {
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-gray-900">Importações</h1>
+    <div class="mb-8 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Importações</h1>
+        <p class="mt-1 text-sm text-gray-500">Importe usuários em massa via arquivo CSV</p>
+      </div>
       <AppButton @click="showUploadModal = true">Upload CSV</AppButton>
     </div>
 

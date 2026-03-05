@@ -57,7 +57,10 @@ async function handleSubmit(): Promise<void> {
 
 <template>
   <div>
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">Editar Usuário</h1>
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900">Editar Usuário</h1>
+      <p class="mt-1 text-sm text-gray-500">Atualize os dados do usuário</p>
+    </div>
     <AppCard>
       <div v-if="userStore.loading" class="py-12 text-center text-gray-500">
         Carregando...
