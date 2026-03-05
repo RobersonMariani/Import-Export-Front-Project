@@ -51,6 +51,32 @@ export const useImportStore = defineStore("import", () => {
     }
   }
 
+  async function deleteImport(id: string): Promise<void> {
+    try {
+      await importService.delete(id);
+      imports.value = imports.value.filter((i) => i.id !== id);
+      useNotificationStore().success("Importação excluída com sucesso");
+    } catch {
+      useNotificationStore().error("Erro ao excluir importação");
+    }
+  }
+
+  async function retryImport(id: string): Promise<Import | null> {
+    try {
+      const result = await importService.retry(id);
+      const idx = imports.value.findIndex((i) => i.id === id);
+      if (idx !== -1) imports.value[idx] = result;
+      if (currentImport.value?.id === id) currentImport.value = result;
+      useNotificationStore().success("Importação reenviada para a fila");
+      return result;
+    } catch {
+      useNotificationStore().error(
+        "Erro ao reprocessar importação. Apenas importações com falha podem ser reprocessadas.",
+      );
+      return null;
+    }
+  }
+
   function setFilters(newFilters: Partial<ImportFilters>): void {
     filters.value = {
       ...filters.value,
@@ -70,6 +96,8 @@ export const useImportStore = defineStore("import", () => {
     fetchImport,
     uploadCsv,
     refreshStatus,
+    deleteImport,
+    retryImport,
     setFilters,
   };
 });

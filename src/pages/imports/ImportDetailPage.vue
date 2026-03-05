@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { onMounted, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useImportStore } from "@/stores/import";
 import { usePolling } from "@/composables/usePolling";
 import AppCard from "@/components/ui/AppCard.vue";
 import AppBadge from "@/components/ui/AppBadge.vue";
+import AppButton from "@/components/ui/AppButton.vue";
+import AppAlert from "@/components/ui/AppAlert.vue";
 import AppProgressBar from "@/components/ui/AppProgressBar.vue";
 
 const route = useRoute();
+const router = useRouter();
 const importStore = useImportStore();
 const importId = route.params.id as string;
+
+const canRetry = computed(() => {
+  const s = importStore.currentImport?.status;
+  return s === "failed" || s === "partial";
+});
 
 const isFinal = computed(() => {
   const s = importStore.currentImport?.status;
@@ -39,7 +47,17 @@ function formatDuration(seconds: number | null): string {
   return `${m}m ${s}s`;
 }
 
-// Stop polling when import is final
+async function handleRetry(): Promise<void> {
+  const result = await importStore.retryImport(importId);
+  if (result) start();
+}
+
+async function handleDelete(): Promise<void> {
+  if (!confirm("Tem certeza que deseja excluir esta importação?")) return;
+  await importStore.deleteImport(importId);
+  router.push({ name: "imports" });
+}
+
 import { watch } from "vue";
 watch(isFinal, (val) => {
   if (val) stop();
@@ -48,13 +66,39 @@ watch(isFinal, (val) => {
 
 <template>
   <div>
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">Detalhe da Importação</h1>
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-gray-900">Detalhe da Importação</h1>
+      <div class="flex gap-2">
+        <AppButton
+          v-if="canRetry"
+          variant="secondary"
+          @click="handleRetry"
+        >
+          Reprocessar
+        </AppButton>
+        <AppButton
+          variant="ghost"
+          class="text-red-600 hover:text-red-800"
+          @click="handleDelete"
+        >
+          Excluir
+        </AppButton>
+      </div>
+    </div>
 
     <div v-if="importStore.loading" class="py-12 text-center text-gray-500">
       Carregando...
     </div>
 
     <template v-else-if="importStore.currentImport">
+      <AppAlert
+        v-if="importStore.currentImport.error_message"
+        type="error"
+        class="mb-4"
+      >
+        <strong>Erro:</strong> {{ importStore.currentImport.error_message }}
+      </AppAlert>
+
       <div class="mb-6">
         <AppProgressBar
           :value="importStore.currentImport.progress"

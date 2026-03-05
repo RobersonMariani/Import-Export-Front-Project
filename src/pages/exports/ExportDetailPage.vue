@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { onMounted, computed, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useExportStore } from "@/stores/export";
 import { usePolling } from "@/composables/usePolling";
 import AppCard from "@/components/ui/AppCard.vue";
 import AppBadge from "@/components/ui/AppBadge.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import AppAlert from "@/components/ui/AppAlert.vue";
 
 const route = useRoute();
+const router = useRouter();
 const exportStore = useExportStore();
 const exportId = route.params.id as string;
 
@@ -26,9 +28,22 @@ onMounted(async () => {
   if (!isFinal.value) start();
 });
 
+const canRetry = computed(() => exportStore.currentExport?.status === "failed");
+
 watch(isFinal, (val) => {
   if (val) stop();
 });
+
+async function handleRetry(): Promise<void> {
+  const result = await exportStore.retryExport(exportId);
+  if (result) start();
+}
+
+async function handleDelete(): Promise<void> {
+  if (!confirm("Tem certeza que deseja excluir esta exportação?")) return;
+  await exportStore.deleteExport(exportId);
+  router.push({ name: "exports" });
+}
 
 function formatDate(date: string | null): string {
   if (!date) return "-";
@@ -44,13 +59,39 @@ function formatDuration(seconds: number | null): string {
 
 <template>
   <div>
-    <h1 class="mb-6 text-2xl font-bold text-gray-900">Detalhe da Exportação</h1>
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-gray-900">Detalhe da Exportação</h1>
+      <div class="flex gap-2">
+        <AppButton
+          v-if="canRetry"
+          variant="secondary"
+          @click="handleRetry"
+        >
+          Reprocessar
+        </AppButton>
+        <AppButton
+          variant="ghost"
+          class="text-red-600 hover:text-red-800"
+          @click="handleDelete"
+        >
+          Excluir
+        </AppButton>
+      </div>
+    </div>
 
     <div v-if="exportStore.loading" class="py-12 text-center text-gray-500">
       Carregando...
     </div>
 
     <template v-else-if="exportStore.currentExport">
+      <AppAlert
+        v-if="exportStore.currentExport.error_message"
+        type="error"
+        class="mb-4"
+      >
+        <strong>Erro:</strong> {{ exportStore.currentExport.error_message }}
+      </AppAlert>
+
       <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <AppCard>
           <p class="text-sm text-gray-500">Status</p>

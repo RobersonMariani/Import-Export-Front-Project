@@ -30,4 +30,15 @@ export const importService = {
     });
     return response.data.data;
   },
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`/imports/${id}`);
+  },
+
+  async retry(id: string): Promise<Import> {
+    const response = await api.post<ApiResponse<Import>>(
+      `/imports/${id}/retry`,
+    );
+    return response.data.data;
+  },
 };

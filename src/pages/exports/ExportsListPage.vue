@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { useExportStore } from "@/stores/export";
 import { useNotificationStore } from "@/stores/notification";
 import { ROLE_OPTIONS } from "@/types";
-import type { Export, CreateExportPayload } from "@/types";
+import type { CreateExportPayload } from "@/types";
 import AppCard from "@/components/ui/AppCard.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppBadge from "@/components/ui/AppBadge.vue";
@@ -16,8 +16,6 @@ const router = useRouter();
 const exportStore = useExportStore();
 const notify = useNotificationStore();
 const showCreateModal = ref(false);
-const exports = ref<Export[]>([]);
-const loading = ref(true);
 
 const filterSearch = ref("");
 const filterRole = ref("");
@@ -25,16 +23,21 @@ const filterState = ref("");
 const filterCity = ref("");
 const compressed = ref(false);
 
-onMounted(async () => {
-  try {
-    const res = await (await import("@/lib/api")).default.get("/exports");
-    exports.value = res.data.data ?? res.data;
-  } catch {
-    // no exports yet
-  } finally {
-    loading.value = false;
-  }
+onMounted(() => {
+  exportStore.fetchExports();
 });
+
+async function handleDelete(id: string): Promise<void> {
+  if (!confirm("Tem certeza que deseja excluir esta exportação?")) return;
+  await exportStore.deleteExport(id);
+}
+
+async function handleRetry(id: string): Promise<void> {
+  const result = await exportStore.retryExport(id);
+  if (result) {
+    router.push({ name: "exports-detail", params: { id: result.id } });
+  }
+}
 
 async function handleCreate(): Promise<void> {
   const payload: CreateExportPayload = { compressed: compressed.value };
@@ -81,15 +84,15 @@ function formatDate(date: string): string {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-if="loading" class="text-center">
+            <tr v-if="exportStore.loading" class="text-center">
               <td colspan="6" class="px-6 py-8 text-gray-500">Carregando...</td>
             </tr>
-            <tr v-else-if="exports.length === 0" class="text-center">
+            <tr v-else-if="exportStore.exports.length === 0" class="text-center">
               <td colspan="6" class="px-6 py-8 text-gray-500">
                 Nenhuma exportação encontrada
               </td>
             </tr>
-            <tr v-for="exp in exports" :key="exp.id" class="hover:bg-gray-50">
+            <tr v-for="exp in exportStore.exports" :key="exp.id" class="hover:bg-gray-50">
               <td class="px-6 py-4 font-mono text-xs text-gray-500">
                 {{ exp.id.slice(0, 8) }}...
               </td>
@@ -106,17 +109,34 @@ function formatDate(date: string): string {
                 {{ formatDate(exp.created_at) }}
               </td>
               <td class="px-6 py-4">
-                <AppButton
-                  size="sm"
-                  variant="ghost"
-                  @click="
-                    router.push({
-                      name: 'exports-detail',
-                      params: { id: exp.id },
-                    })
-                  "
-                  >Ver</AppButton
-                >
+                <div class="flex items-center gap-1">
+                  <AppButton
+                    size="sm"
+                    variant="ghost"
+                    @click="
+                      router.push({
+                        name: 'exports-detail',
+                        params: { id: exp.id },
+                      })
+                    "
+                    >Ver</AppButton
+                  >
+                  <AppButton
+                    v-if="exp.status === 'failed'"
+                    size="sm"
+                    variant="ghost"
+                    class="text-blue-600 hover:text-blue-800"
+                    @click="handleRetry(exp.id)"
+                    >Reprocessar</AppButton
+                  >
+                  <AppButton
+                    size="sm"
+                    variant="ghost"
+                    class="text-red-600 hover:text-red-800"
+                    @click="handleDelete(exp.id)"
+                    >Excluir</AppButton
+                  >
+                </div>
               </td>
             </tr>
           </tbody>

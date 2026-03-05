@@ -1,7 +1,24 @@
 import api from "@/lib/api";
-import type { ApiResponse, CreateExportPayload, Export } from "@/types";
+import type {
+  ApiResponse,
+  CreateExportPayload,
+  Export,
+  PaginatedResponse,
+} from "@/types";
 
 export const exportService = {
+  async list(
+    params: Record<string, string | number | undefined> = {},
+  ): Promise<PaginatedResponse<Export>> {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== ""),
+    );
+    const response = await api.get<PaginatedResponse<Export>>("/exports", {
+      params: cleanParams,
+    });
+    return response.data;
+  },
+
   async create(payload: CreateExportPayload = {}): Promise<Export> {
     const body: Record<string, unknown> = {};
     if (payload.compressed !== undefined) body.compressed = payload.compressed;
@@ -27,5 +44,16 @@ export const exportService = {
       `/exports/${id}/download`,
     );
     return response.data.data.download_url;
+  },
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`/exports/${id}`);
+  },
+
+  async retry(id: string): Promise<Export> {
+    const response = await api.post<ApiResponse<Export>>(
+      `/exports/${id}/retry`,
+    );
+    return response.data.data;
   },
 };

@@ -39,6 +39,7 @@ export interface Import {
   success_count: number;
   failure_count: number;
   original_filename: string;
+  error_message: string | null;
   started_at: string | null;
   finished_at: string | null;
   processing_time_seconds: number | null;
@@ -53,6 +54,7 @@ export interface Export {
   total_records: number;
   compressed: boolean;
   file_path: string | null;
+  error_message: string | null;
   download_url: string | null;
   expires_at: string | null;
   started_at: string | null;

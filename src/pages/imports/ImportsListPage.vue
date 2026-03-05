@@ -45,6 +45,18 @@ async function handleUpload(): Promise<void> {
   }
 }
 
+async function handleDelete(id: string): Promise<void> {
+  if (!confirm("Tem certeza que deseja excluir esta importação?")) return;
+  await importStore.deleteImport(id);
+}
+
+async function handleRetry(id: string): Promise<void> {
+  const result = await importStore.retryImport(id);
+  if (result) {
+    router.push({ name: "imports-detail", params: { id: result.id } });
+  }
+}
+
 function formatDate(date: string): string {
   return new Date(date).toLocaleString("pt-BR");
 }
@@ -117,17 +129,34 @@ function formatDate(date: string): string {
                 {{ formatDate(imp.created_at) }}
               </td>
               <td class="px-6 py-4">
-                <AppButton
-                  size="sm"
-                  variant="ghost"
-                  @click="
-                    router.push({
-                      name: 'imports-detail',
-                      params: { id: imp.id },
-                    })
-                  "
-                  >Ver</AppButton
-                >
+                <div class="flex items-center gap-1">
+                  <AppButton
+                    size="sm"
+                    variant="ghost"
+                    @click="
+                      router.push({
+                        name: 'imports-detail',
+                        params: { id: imp.id },
+                      })
+                    "
+                    >Ver</AppButton
+                  >
+                  <AppButton
+                    v-if="imp.status === 'failed' || imp.status === 'partial'"
+                    size="sm"
+                    variant="ghost"
+                    class="text-blue-600 hover:text-blue-800"
+                    @click="handleRetry(imp.id)"
+                    >Reprocessar</AppButton
+                  >
+                  <AppButton
+                    size="sm"
+                    variant="ghost"
+                    class="text-red-600 hover:text-red-800"
+                    @click="handleDelete(imp.id)"
+                    >Excluir</AppButton
+                  >
+                </div>
               </td>
             </tr>
           </tbody>
