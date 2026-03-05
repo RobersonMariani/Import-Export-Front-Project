@@ -1,0 +1,39 @@
+services:
+  # Desenvolvimento com hot-reload (padrão)
+  dev:
+    image: node:22-alpine
+    container_name: import-export-frontend-dev
+    working_dir: /app
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./:/app
+      - frontend-node-modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    networks:
+      - import-export-network
+
+  # Produção com Nginx (docker compose --profile prod up)
+  frontend:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+      target: production
+    container_name: import-export-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    networks:
+      - import-export-network
+    profiles:
+      - prod
+
+networks:
+  import-export-network:
+    external: true
+    name: import-export-api-project_app-network
+
+volumes:
+  frontend-node-modules:
