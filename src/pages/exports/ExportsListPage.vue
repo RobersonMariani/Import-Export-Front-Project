@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useExportStore } from "@/stores/export";
 import { useNotificationStore } from "@/stores/notification";
+import { userService } from "@/services/userService";
 import { ROLE_OPTIONS } from "@/types";
 import type { CreateExportPayload } from "@/types";
 import AppCard from "@/components/ui/AppCard.vue";
@@ -22,6 +23,49 @@ const filterRole = ref("");
 const filterState = ref("");
 const filterCity = ref("");
 const compressed = ref(false);
+
+const previewCount = ref<number | null>(null);
+const countLoading = ref(false);
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+const currentFilters = computed(() => ({
+  search: filterSearch.value,
+  role: filterRole.value,
+  state: filterState.value,
+  city: filterCity.value,
+}));
+
+const hasFilters = computed(() =>
+  Object.values(currentFilters.value).some((v) => v !== ""),
+);
+
+async function fetchPreviewCount(): Promise<void> {
+  countLoading.value = true;
+  try {
+    previewCount.value = await userService.count(currentFilters.value);
+  } catch {
+    previewCount.value = null;
+  } finally {
+    countLoading.value = false;
+  }
+}
+
+watch(currentFilters, () => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  countLoading.value = true;
+  debounceTimer = setTimeout(fetchPreviewCount, 400);
+}, { deep: true });
+
+watch(showCreateModal, (open) => {
+  if (open) {
+    filterSearch.value = "";
+    filterRole.value = "";
+    filterState.value = "";
+    filterCity.value = "";
+    compressed.value = false;
+    fetchPreviewCount();
+  }
+});
 
 onMounted(() => {
   exportStore.fetchExports();
@@ -150,6 +194,11 @@ function formatDate(date: string): string {
       @close="showCreateModal = false"
     >
       <div class="space-y-4">
+        <p class="text-sm text-gray-500">
+          Aplique filtros para selecionar quais usuários deseja exportar,
+          ou exporte todos sem filtros.
+        </p>
+
         <AppInput
           v-model="filterSearch"
           label="Busca (nome/email)"
@@ -172,14 +221,45 @@ function formatDate(date: string): string {
           />
           Comprimir arquivo (gzip)
         </label>
+
+        <div
+          class="rounded-lg border p-4 text-center"
+          :class="{
+            'border-indigo-200 bg-indigo-50': previewCount !== null && previewCount > 0,
+            'border-amber-200 bg-amber-50': previewCount === 0,
+            'border-gray-200 bg-gray-50': previewCount === null || countLoading,
+          }"
+        >
+          <template v-if="countLoading">
+            <p class="text-sm text-gray-500">Contando registros...</p>
+          </template>
+          <template v-else-if="previewCount !== null">
+            <p class="text-2xl font-bold" :class="previewCount > 0 ? 'text-indigo-600' : 'text-amber-600'">
+              {{ previewCount.toLocaleString('pt-BR') }}
+            </p>
+            <p class="text-sm" :class="previewCount > 0 ? 'text-indigo-500' : 'text-amber-500'">
+              {{ previewCount === 1 ? 'usuário encontrado' : 'usuários encontrados' }}
+              <span v-if="hasFilters">com os filtros aplicados</span>
+              <span v-else>(total no sistema)</span>
+            </p>
+          </template>
+          <template v-else>
+            <p class="text-sm text-gray-400">Não foi possível obter a contagem</p>
+          </template>
+        </div>
       </div>
+
       <div class="mt-4 flex justify-end gap-2">
-        <AppButton variant="secondary" @click="showCreateModal = false"
-          >Cancelar</AppButton
+        <AppButton variant="secondary" @click="showCreateModal = false">
+          Cancelar
+        </AppButton>
+        <AppButton
+          :loading="exportStore.creating"
+          :disabled="previewCount === 0"
+          @click="handleCreate"
         >
-        <AppButton :loading="exportStore.creating" @click="handleCreate"
-          >Exportar</AppButton
-        >
+          Exportar {{ previewCount !== null && previewCount > 0 ? `${previewCount.toLocaleString('pt-BR')} registros` : '' }}
+        </AppButton>
       </div>
     </AppModal>
   </div>

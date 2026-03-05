@@ -39,4 +39,16 @@ export const userService = {
   async remove(id: number): Promise<void> {
     await api.delete(`/users/${id}`);
   },
+
+  async count(
+    filters: Record<string, string | undefined> = {},
+  ): Promise<number> {
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([, v]) => v !== undefined && v !== ""),
+    );
+    const response = await api.get<{ count: number }>("/users/count", {
+      params,
+    });
+    return response.data.count;
+  },
 };
