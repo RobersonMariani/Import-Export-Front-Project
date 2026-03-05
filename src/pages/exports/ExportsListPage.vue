@@ -9,6 +9,7 @@ import type { Export, CreateExportPayload } from "@/types";
 import AppCard from "@/components/ui/AppCard.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppBadge from "@/components/ui/AppBadge.vue";
+import AppPagination from "@/components/ui/AppPagination.vue";
 import AppModal from "@/components/ui/AppModal.vue";
 import AppInput from "@/components/ui/AppInput.vue";
 import AppSelect from "@/components/ui/AppSelect.vue";
@@ -24,6 +25,9 @@ const filterState = ref("");
 const filterCity = ref("");
 const compressed = ref(false);
 
+const exportPage = ref(1);
+const exportPerPage = ref(15);
+
 const previewCount = ref<number | null>(null);
 const countLoading = ref(false);
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -32,6 +36,10 @@ let fastTimer: ReturnType<typeof setInterval> | null = null;
 let bgTimer: ReturnType<typeof setInterval> | null = null;
 const FAST_INTERVAL = 3000;
 const BG_INTERVAL = 10000;
+
+function exportParams(): Record<string, string | number> {
+  return { page: exportPage.value, per_page: exportPerPage.value };
+}
 
 const hasActive = computed(() => exportStore.hasActiveExports());
 const activeCount = computed(
@@ -45,7 +53,7 @@ function startFastPolling(): void {
   stopFastPolling();
   fastTimer = setInterval(async () => {
     try {
-      await exportStore.refreshExports();
+      await exportStore.refreshExports(exportParams());
       if (!exportStore.hasActiveExports()) {
         stopFastPolling();
       }
@@ -66,7 +74,7 @@ function startBgPolling(): void {
   if (bgTimer) return;
   bgTimer = setInterval(async () => {
     try {
-      await exportStore.refreshExports();
+      await exportStore.refreshExports(exportParams());
       if (exportStore.hasActiveExports() && !fastTimer) {
         startFastPolling();
       }
@@ -135,10 +143,21 @@ watch(showCreateModal, (open) => {
 });
 
 onMounted(async () => {
-  await exportStore.fetchExports();
+  await exportStore.fetchExports(exportParams());
   startBgPolling();
   if (hasActive.value) startFastPolling();
 });
+
+function handlePageChange(page: number): void {
+  exportPage.value = page;
+  exportStore.fetchExports(exportParams());
+}
+
+function handlePerPageChange(perPage: number): void {
+  exportPerPage.value = perPage;
+  exportPage.value = 1;
+  exportStore.fetchExports(exportParams());
+}
 
 async function handleDelete(id: string): Promise<void> {
   if (!confirm("Tem certeza que deseja excluir esta exportação?")) return;
@@ -164,7 +183,7 @@ async function handleCreate(): Promise<void> {
   try {
     const result = await exportStore.createExport(payload);
     showCreateModal.value = false;
-    await exportStore.fetchExports();
+    await exportStore.fetchExports(exportParams());
     if (!fastTimer) startFastPolling();
     router.push({ name: "exports-detail", params: { id: result.id } });
   } catch {
@@ -418,6 +437,14 @@ function isActive(exp: Export): boolean {
             </template>
           </tbody>
         </table>
+      </div>
+
+      <div v-if="exportStore.pagination" class="p-4">
+        <AppPagination
+          :pagination="exportStore.pagination"
+          @page-change="(p) => handlePageChange(p)"
+          @per-page-change="(pp) => handlePerPageChange(pp)"
+        />
       </div>
     </AppCard>
 

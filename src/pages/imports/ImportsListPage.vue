@@ -455,6 +455,7 @@ function formatDuration(seconds: number | null): string {
         <AppPagination
           :pagination="importStore.pagination"
           @page-change="(p) => importStore.setFilters({ page: p })"
+          @per-page-change="(pp) => importStore.setFilters({ per_page: pp, page: 1 })"
         />
       </div>
     </AppCard>

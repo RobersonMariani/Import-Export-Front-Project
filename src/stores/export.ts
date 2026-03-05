@@ -26,9 +26,11 @@ export const useExportStore = defineStore("export", () => {
     }
   }
 
-  async function refreshExports(): Promise<void> {
+  async function refreshExports(
+    params: Record<string, string | number | undefined> = {},
+  ): Promise<void> {
     try {
-      const response = await exportService.list();
+      const response = await exportService.list(params);
       exports.value = response.data;
       pagination.value = response.meta;
     } catch {

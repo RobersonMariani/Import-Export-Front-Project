@@ -149,6 +149,7 @@ async function handleDelete(): Promise<void> {
         <AppPagination
           :pagination="userStore.pagination"
           @page-change="(p) => userStore.setFilters({ page: p })"
+          @per-page-change="(pp) => userStore.setFilters({ per_page: pp, page: 1 })"
         />
       </div>
     </AppCard>
