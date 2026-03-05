@@ -20,8 +20,10 @@ const notify = useNotificationStore();
 const showUploadModal = ref(false);
 const selectedFile = ref<File | null>(null);
 
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-const POLL_INTERVAL = 3000;
+let fastTimer: ReturnType<typeof setInterval> | null = null;
+let bgTimer: ReturnType<typeof setInterval> | null = null;
+const FAST_INTERVAL = 3000;
+const BG_INTERVAL = 10000;
 
 const hasActive = computed(() => importStore.hasActiveImports());
 
@@ -32,43 +34,68 @@ const activeCount = computed(
     ).length,
 );
 
-function startPolling(): void {
-  stopPolling();
-  pollTimer = setInterval(async () => {
+function startFastPolling(): void {
+  stopFastPolling();
+  fastTimer = setInterval(async () => {
     try {
       await importStore.refreshImports();
-      if (!importStore.hasActiveImports()) stopPolling();
+      if (!importStore.hasActiveImports()) {
+        stopFastPolling();
+      }
     } catch {
-      stopPolling();
+      stopFastPolling();
     }
-  }, POLL_INTERVAL);
+  }, FAST_INTERVAL);
 }
 
-function stopPolling(): void {
-  if (pollTimer) {
-    clearInterval(pollTimer);
-    pollTimer = null;
+function stopFastPolling(): void {
+  if (fastTimer) {
+    clearInterval(fastTimer);
+    fastTimer = null;
+  }
+}
+
+function startBgPolling(): void {
+  if (bgTimer) return;
+  bgTimer = setInterval(async () => {
+    try {
+      await importStore.refreshImports();
+      if (importStore.hasActiveImports() && !fastTimer) {
+        startFastPolling();
+      }
+    } catch {
+      // keep bg polling alive
+    }
+  }, BG_INTERVAL);
+}
+
+function stopAllPolling(): void {
+  stopFastPolling();
+  if (bgTimer) {
+    clearInterval(bgTimer);
+    bgTimer = null;
   }
 }
 
 watch(hasActive, (active) => {
-  if (active && !pollTimer) startPolling();
-  if (!active) stopPolling();
+  if (active && !fastTimer) startFastPolling();
+  if (!active) stopFastPolling();
 });
 
 onMounted(async () => {
   await importStore.fetchImports();
-  if (hasActive.value) startPolling();
+  startBgPolling();
+  if (hasActive.value) startFastPolling();
 });
 
-onUnmounted(() => stopPolling());
+onUnmounted(() => stopAllPolling());
 
 watch(
   () => importStore.filters,
   async () => {
-    stopPolling();
+    stopFastPolling();
     await importStore.fetchImports();
-    if (hasActive.value) startPolling();
+    if (hasActive.value) startFastPolling();
   },
   { deep: true },
 );
@@ -88,7 +115,7 @@ async function handleUpload(): Promise<void> {
     showUploadModal.value = false;
     selectedFile.value = null;
     await importStore.fetchImports();
-    if (!pollTimer) startPolling();
+    if (!fastTimer) startFastPolling();
     router.push({ name: "imports-detail", params: { id: result.id } });
   } catch {
     notify.error("Erro ao fazer upload do CSV");
@@ -103,7 +130,7 @@ async function handleDelete(id: string): Promise<void> {
 async function handleRetry(id: string): Promise<void> {
   const result = await importStore.retryImport(id);
   if (result) {
-    if (!pollTimer) startPolling();
+    if (!fastTimer) startFastPolling();
     router.push({ name: "imports-detail", params: { id: result.id } });
   }
 }

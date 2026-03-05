@@ -28,8 +28,10 @@ const previewCount = ref<number | null>(null);
 const countLoading = ref(false);
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-const POLL_INTERVAL = 3000;
+let fastTimer: ReturnType<typeof setInterval> | null = null;
+let bgTimer: ReturnType<typeof setInterval> | null = null;
+const FAST_INTERVAL = 3000;
+const BG_INTERVAL = 10000;
 
 const hasActive = computed(() => exportStore.hasActiveExports());
 const activeCount = computed(
@@ -39,31 +41,55 @@ const activeCount = computed(
     ).length,
 );
 
-function startPolling(): void {
-  stopPolling();
-  pollTimer = setInterval(async () => {
+function startFastPolling(): void {
+  stopFastPolling();
+  fastTimer = setInterval(async () => {
     try {
       await exportStore.refreshExports();
-      if (!exportStore.hasActiveExports()) stopPolling();
+      if (!exportStore.hasActiveExports()) {
+        stopFastPolling();
+      }
     } catch {
-      stopPolling();
+      stopFastPolling();
     }
-  }, POLL_INTERVAL);
+  }, FAST_INTERVAL);
 }
 
-function stopPolling(): void {
-  if (pollTimer) {
-    clearInterval(pollTimer);
-    pollTimer = null;
+function stopFastPolling(): void {
+  if (fastTimer) {
+    clearInterval(fastTimer);
+    fastTimer = null;
+  }
+}
+
+function startBgPolling(): void {
+  if (bgTimer) return;
+  bgTimer = setInterval(async () => {
+    try {
+      await exportStore.refreshExports();
+      if (exportStore.hasActiveExports() && !fastTimer) {
+        startFastPolling();
+      }
+    } catch {
+      // keep bg polling alive
+    }
+  }, BG_INTERVAL);
+}
+
+function stopAllPolling(): void {
+  stopFastPolling();
+  if (bgTimer) {
+    clearInterval(bgTimer);
+    bgTimer = null;
   }
 }
 
 watch(hasActive, (active) => {
-  if (active && !pollTimer) startPolling();
-  if (!active) stopPolling();
+  if (active && !fastTimer) startFastPolling();
+  if (!active) stopFastPolling();
 });
 
-onUnmounted(() => stopPolling());
+onUnmounted(() => stopAllPolling());
 
 const currentFilters = computed(() => ({
   search: filterSearch.value,
@@ -110,7 +136,8 @@ watch(showCreateModal, (open) => {
 
 onMounted(async () => {
   await exportStore.fetchExports();
-  if (hasActive.value) startPolling();
+  startBgPolling();
+  if (hasActive.value) startFastPolling();
 });
 
 async function handleDelete(id: string): Promise<void> {
@@ -121,7 +148,7 @@ async function handleDelete(id: string): Promise<void> {
 async function handleRetry(id: string): Promise<void> {
   const result = await exportStore.retryExport(id);
   if (result) {
-    if (!pollTimer) startPolling();
+    if (!fastTimer) startFastPolling();
     router.push({ name: "exports-detail", params: { id: result.id } });
   }
 }
@@ -138,7 +165,7 @@ async function handleCreate(): Promise<void> {
     const result = await exportStore.createExport(payload);
     showCreateModal.value = false;
     await exportStore.fetchExports();
-    if (!pollTimer) startPolling();
+    if (!fastTimer) startFastPolling();
     router.push({ name: "exports-detail", params: { id: result.id } });
   } catch {
     notify.error("Erro ao criar exportação");
